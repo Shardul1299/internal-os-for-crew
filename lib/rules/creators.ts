@@ -56,7 +56,8 @@ export function validateFilterScore(s: { aesthetics: number; taste: number; pers
 
 export function latestFilter(scores: FilterScore[]): FilterScore | null {
   if (!scores.length) return null;
-  return [...scores].sort((a, b) => (a.scoredAt < b.scoredAt ? 1 : -1))[0];
+  // Stable on equal dates: callers pass scores newest-first, so a same-day re-score wins.
+  return [...scores].sort((a, b) => (a.scoredAt < b.scoredAt ? 1 : a.scoredAt > b.scoredAt ? -1 : 0))[0];
 }
 
 /** A Filter fail can't be overridden by any other score or rule (§0.1 #2). */
