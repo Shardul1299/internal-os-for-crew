@@ -21,6 +21,7 @@ import { StageMenu } from "@/components/creators/StageMenu";
 import { SheetForm } from "@/components/creators/SheetForm";
 import { CreatorSummaryBlock } from "@/components/creators/Summary";
 import { OverviewTab } from "@/components/creators/tabs/Overview";
+import { creatorSundayCadence } from "@/lib/queries/program";
 import { FilterTierTab } from "@/components/creators/tabs/FilterTier";
 import { RatesTab } from "@/components/creators/tabs/Rates";
 import { CalendarTab } from "@/components/creators/tabs/Calendar";
@@ -179,7 +180,7 @@ export default async function CreatorRecord({ params, searchParams }: { params: 
       body = <AgreementTab summary={summary} agreement={agreement} role={me.role} cfg={cfg} today={today} />;
       break;
     default:
-      body = <OverviewTab summary={summary} data={await creatorOverview(id, c.referredByCreatorId)} role={me.role} />;
+      body = <OverviewTab summary={summary} data={await creatorOverview(id, c.referredByCreatorId)} role={me.role} cadence={await creatorSundayCadence(id)} />;
   }
 
   return (

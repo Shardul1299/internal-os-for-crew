@@ -12,7 +12,7 @@ import type { CreatorSummary, creatorOverview } from "@/lib/queries/creators";
 
 type Overview = Awaited<ReturnType<typeof creatorOverview>>;
 
-export function OverviewTab({ summary, data, role }: { summary: CreatorSummary; data: Overview; role: string }) {
+export function OverviewTab({ summary, data, role, cadence }: { summary: CreatorSummary; data: Overview; role: string; cadence?: { invited: number; attended: number } }) {
   const c = summary.creator;
   const editable = canEditCreator(role, c.stage).ok;
   const access = studioAccess(c.stage, c.consentStatus);
@@ -155,7 +155,15 @@ export function OverviewTab({ summary, data, role }: { summary: CreatorSummary; 
                       : "Opens at Incubation"
               }
             />
+            {cadence && cadence.invited > 0 ? <Kv k="Sunday shoots" v={`${cadence.attended} of ${cadence.invited} attended`} /> : null}
           </Kvs>
+          {["owner", "crew_lead"].includes(role) && summary.studioUser ? (
+            <p className="mt-2">
+              <a className="underline underline-offset-2 text-fg-2 hover:text-fg" href={`/api/creators/${c.id}/studio-export`}>
+                Export Studio data
+              </a>
+            </p>
+          ) : null}
           {(c.stage === "incubation" || c.stage === "roster") && !summary.studioUser?.active ? (
             <div className="mt-2 flex items-center gap-3">
               {invite.ok ? (

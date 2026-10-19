@@ -255,7 +255,13 @@ export async function setConsent(_prev: ActionResult | null, fd: FormData): Prom
     await withUser(me.id, async (tx) => {
       await tx.update(s.creators).set({ consentStatus: input.consentStatus }).where(eq(s.creators.id, input.id));
       if (input.consentStatus === "withdrawn") {
-        // BRIEF: clarify — §4 also exports the creator's Studio data to them before archiving; the export lives with Studio.
+        // §4 Studio access: Studio data is archived (Crew can still export it for the creator from the record).
+        const now = new Date();
+        await tx.update(s.studioScripts).set({ archivedAt: now }).where(and(eq(s.studioScripts.creatorId, input.id), isNull(s.studioScripts.archivedAt)));
+        await tx.update(s.studioCarousels).set({ archivedAt: now }).where(and(eq(s.studioCarousels.creatorId, input.id), isNull(s.studioCarousels.archivedAt)));
+        await tx.update(s.studioOutliers).set({ archivedAt: now }).where(and(eq(s.studioOutliers.creatorId, input.id), isNull(s.studioOutliers.archivedAt)));
+        await tx.update(s.studioHookStacks).set({ archivedAt: now }).where(and(eq(s.studioHookStacks.creatorId, input.id), isNull(s.studioHookStacks.archivedAt)));
+        await tx.update(s.studioPosts).set({ archivedAt: now }).where(and(eq(s.studioPosts.creatorId, input.id), isNull(s.studioPosts.archivedAt)));
         await tx
           .update(s.users)
           .set({ active: false })
