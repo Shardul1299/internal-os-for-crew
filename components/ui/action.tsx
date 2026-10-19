@@ -1,7 +1,7 @@
 "use client";
 // ActionForm — every write is a server action (§14). Errors render as one inline caption.
 // Reversible actions show a single undo line for 10 seconds (⌘Z); there is no toast stack.
-import { createContext, useActionState, useCallback, useContext, useEffect, useRef, useState, type ReactNode } from "react";
+import { createContext, startTransition, useActionState, useCallback, useContext, useEffect, useRef, useState, type ReactNode } from "react";
 import { useFormStatus } from "react-dom";
 import { useRouter } from "next/navigation";
 import type { ActionResult } from "@/lib/actions/result";
@@ -90,8 +90,13 @@ export function useResultFeedback() {
   );
 }
 
+// Pending state for forms submitted through ActionForm's onSubmit (useFormStatus only sees native form actions).
+const PendingCtx = createContext(false);
+
 export function SubmitButton({ children, variant = "primary", size, className, pendingLabel }: { children: ReactNode; variant?: "primary" | "plain" | "quiet" | "danger"; size?: "sm" | "md"; className?: string; pendingLabel?: string }) {
-  const { pending } = useFormStatus();
+  const status = useFormStatus();
+  const ctxPending = useContext(PendingCtx);
+  const pending = status.pending || ctxPending;
   return (
     <Button type="submit" variant={variant} size={size} disabled={pending} className={className}>
       {pending ? (pendingLabel ?? "Saving…") : children}
@@ -112,7 +117,7 @@ export function ActionForm({
   onDone?: (r: ActionResult) => void;
   resetOnSuccess?: boolean;
 }) {
-  const [state, formAction] = useActionState(action, null);
+  const [state, formAction, isPending] = useActionState(action, null);
   const feedback = useResultFeedback();
   const router = useRouter();
   const ref = useRef<HTMLFormElement>(null);
@@ -127,15 +132,29 @@ export function ActionForm({
       onDone?.(state);
     }
   }, [state, feedback, onDone, resetOnSuccess, router]);
+  // Dispatch from onSubmit rather than the native form action: React resets every uncontrolled field
+  // after a form action completes, which wiped the user's input when the server returned an error.
+  // Successful submits still reset when `resetOnSuccess` is set (above).
   return (
-    <form ref={ref} action={formAction} className={className}>
-      {children}
-      {state && !state.ok ? (
-        <p className="t-caption text-pink-fg mt-2" role="alert">
-          {state.error}
-        </p>
-      ) : null}
-    </form>
+    <PendingCtx.Provider value={isPending}>
+      <form
+        ref={ref}
+        action={formAction}
+        className={className}
+        onSubmit={(e) => {
+          e.preventDefault();
+          const fd = new FormData(e.currentTarget, (e.nativeEvent as SubmitEvent).submitter);
+          startTransition(() => formAction(fd));
+        }}
+      >
+        {children}
+        {state && !state.ok ? (
+          <p className="t-caption text-pink-fg mt-2" role="alert">
+            {state.error}
+          </p>
+        ) : null}
+      </form>
+    </PendingCtx.Provider>
   );
 }
 

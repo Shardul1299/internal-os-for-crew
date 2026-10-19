@@ -1,5 +1,5 @@
 // Money — BRIEF §0.1 #12, §3.6, §5.2. Payouts are generated from receipts, never ahead of them.
-import { type RulesConfig, type DealOrigin } from "./config";
+import { type RulesConfig, type DealOrigin, gate, type GateResult } from "./config";
 import { splitDeal, computeShares, type Split } from "./ladder";
 import { addDays, addBusinessDays, daysBetween, type ISODate } from "../dates";
 
@@ -117,4 +117,75 @@ export function ledger(
 
 export function invoiceNumber(kind: string, seq: number, year: number) {
   return `OWLED/${year}/${kind === "advance" ? "A" : kind === "balance" ? "B" : "X"}${String(seq).padStart(4, "0")}`;
+}
+
+// ---------- Fees, invoices and payout gates (deal record Money step, /money) ----------
+
+/**
+ * Each creator's gross fee on a deal: the sum of their quote lines (case-by-case lines included at
+ * their hand price), scaled pro rata to the signed total when the signed total differs from the quote.
+ * Rounding is absorbed by the last creator so the fees always sum to the signed total.
+ */
+export function creatorFees(
+  lines: { creatorId: string; totalPaise: number }[],
+  creators: { id: string; role: "primary" | "upsell" }[],
+  signedTotalPaise: number | null,
+): CreatorFee[] {
+  const byCreator = new Map<string, number>();
+  for (const l of lines) byCreator.set(l.creatorId, (byCreator.get(l.creatorId) ?? 0) + l.totalPaise);
+  const quoted = [...byCreator.values()].reduce((a, b) => a + b, 0);
+  const ids = [...byCreator.keys()];
+  if (!ids.length) return [];
+  const target = signedTotalPaise && signedTotalPaise > 0 ? signedTotalPaise : quoted;
+  let assigned = 0;
+  return ids.map((id, i) => {
+    const raw = byCreator.get(id)!;
+    const gross = i === ids.length - 1 ? target - assigned : quoted > 0 ? Math.round((raw * target) / quoted) : 0;
+    assigned += gross;
+    return { creatorId: id, role: creators.find((c) => c.id === id)?.role ?? "primary", grossPaise: gross };
+  });
+}
+
+/** The advance invoice is raised once, after signature, on the signed total. */
+export function canIssueAdvance(d: { stageIndex: number; signedIndex: number; signedTotalPaise: number | null; hasAdvance: boolean }): GateResult {
+  const r: string[] = [];
+  if (d.hasAdvance) r.push("Advance invoice already raised");
+  if (d.stageIndex < d.signedIndex) r.push("Deal not signed yet");
+  if (!d.signedTotalPaise || d.signedTotalPaise <= 0) r.push("Signed total missing");
+  return gate(r);
+}
+
+/** The balance invoice follows campaign completion (§5.2 live → reported). */
+export function canIssueBalance(d: { completed: boolean; signedTotalPaise: number | null; hasBalance: boolean }): GateResult {
+  const r: string[] = [];
+  if (d.hasBalance) r.push("Balance invoice already raised");
+  if (!d.completed) r.push("Campaign not completed");
+  if (!d.signedTotalPaise || d.signedTotalPaise <= 0) r.push("Signed total missing");
+  return gate(r);
+}
+
+export function canRecordPayment(inv: { status: string }, amountPaise: number): GateResult {
+  const r: string[] = [];
+  if (inv.status === "paid") r.push("Invoice already paid");
+  if (inv.status === "void") r.push("Invoice is void");
+  if (inv.status === "draft") r.push("Mark the invoice sent first");
+  if (!Number.isFinite(amountPaise) || amountPaise <= 0) r.push("Amount required");
+  return gate(r);
+}
+
+/** Payouts exist only after a receipt; paying one needs it due and a reference. */
+export function canMarkPayoutPaid(p: { status: string }, reference: string): GateResult {
+  const r: string[] = [];
+  if (p.status === "paid") r.push("Payout already paid");
+  if (p.status === "held") r.push("Payout is held");
+  if (!reference.trim()) r.push("Reference required");
+  return gate(r);
+}
+
+/** A referred creator's prior completed deals, for the referral share (first N deals only). */
+export function referralFacts(
+  creators: { id: string; referredByCreatorId: string | null }[],
+  priorCompleted: Map<string, number>,
+): { creatorId: string; referredByCreatorId: string | null; priorDealCount: number }[] {
+  return creators.map((c) => ({ creatorId: c.id, referredByCreatorId: c.referredByCreatorId, priorDealCount: priorCompleted.get(c.id) ?? 0 }));
 }
