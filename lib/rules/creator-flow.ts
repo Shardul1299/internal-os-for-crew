@@ -72,7 +72,7 @@ export function stageMoves(cfg: RulesConfig, c: CreatorFacts, ctx: { role: Role;
   if (c.stage === "alumni") add("return_roster", t("return_roster"), false, true);
   if (c.stage !== "revisit") add("revisit", t("revisit"));
   if (c.stage !== "declined") {
-    // Restrictive reading: partnered creators leave through Alumni, never Declined.
+    // BRIEF: clarify — restrictive reading: partnered creators leave through Alumni, never Declined.
     const extra = c.stage === "roster" || c.stage === "alumni" ? ["Roster creators move to Alumni, not Declined"] : [];
     add("declined", [...t("declined", { reason: "—" }), ...extra], true);
   }
@@ -157,6 +157,7 @@ export function canEditAgreement(role: string): GateResult {
 /**
  * Studio access starts at incubation and stays at roster (§4 Studio access, §19.16).
  * Consent must be opted in and the record must carry an email to invite.
+ * BRIEF: clarify — consent opted-in is required to invite (restrictive reading).
  */
 export function canInviteToStudio(args: { role: string; stage: Stage; consentStatus: string; email: string | null; hasActiveUser: boolean }): GateResult {
   const r: string[] = [];
@@ -186,6 +187,7 @@ export function validateAnchorPlan(cfg: RulesConfig, plan: { anchorFormat: strin
 /**
  * Each completed quarterly check-in schedules the next (§9). Roster entry already schedules four,
  * so the next one is added only when no quarterly is still pending after this one.
+ * BRIEF: clarify — §9 says both "schedules four" and "each completed check-in schedules the next".
  */
 export function needsNextQuarterly(type: string, pendingQuarterlyDueDates: ISODate[], heldOn: ISODate): boolean {
   if (type !== "quarterly") return false;
