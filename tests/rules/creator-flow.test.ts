@@ -21,7 +21,9 @@ import {
   validateAnchorPlan,
   needsNextQuarterly,
   validateBlackout,
+  canStartPartnershipNow,
 } from "@/lib/rules/creator-flow";
+import { canStartPartnership, latestFilter, canTransition } from "@/lib/rules/creators";
 
 const lead = { role: "crew_lead" as const, today: TODAY };
 
@@ -190,5 +192,33 @@ describe("§9 each completed quarterly schedules the next", () => {
   it("other check-in types don't", () => {
     expect(needsNextQuarterly("adhoc", [], TODAY)).toBe(false);
     expect(needsNextQuarterly("pilot_end", [], TODAY)).toBe(false);
+  });
+});
+
+describe("roster pilot → partnership happens at pilot end (§4)", () => {
+  const r = creator({
+    stage: "roster",
+    agreementStatus: "pilot",
+    filterScores: [{ aesthetics: 5, taste: 4, personality: 4, total: 13, sentence: "s", scoredAt: "2026-10-10", context: "roster_review" }],
+  });
+  const owner = { role: "owner" as const, today: TODAY };
+  it("passes for the Owner after the pilot ends with a fresh Filter", () => {
+    expect(canStartPartnershipNow(canStartPartnership(cfg, r, owner), "2026-10-19", TODAY).ok).toBe(true);
+  });
+  it("blocks mid-pilot", () => {
+    expect(canStartPartnershipNow(canStartPartnership(cfg, r, owner), "2026-11-18", TODAY).reasons).toContain("Pilot ends 2026-11-18");
+  });
+  it("keeps the base gate's reasons", () => {
+    expect(canStartPartnershipNow(canStartPartnership(cfg, r, { role: "crew_lead", today: TODAY }), "2026-10-01", TODAY).reasons).toContain("Needs Owner approval");
+  });
+});
+
+describe("same-day re-score (latestFilter)", () => {
+  const fail = { aesthetics: 4, taste: 4, personality: 3, total: 11, sentence: "s", scoredAt: TODAY, context: "scout" };
+  const pass = { aesthetics: 5, taste: 4, personality: 4, total: 13, sentence: "s", scoredAt: TODAY, context: "scout" };
+  it("the newest of two same-day scores counts (scores arrive newest-first)", () => {
+    expect(latestFilter([pass, fail])!.total).toBe(13);
+    expect(latestFilter([fail, pass])!.total).toBe(11);
+    expect(canTransition(cfg, creator({ filterScores: [pass, fail] }), "watchlist", { role: "crew_lead", today: TODAY }).ok).toBe(true);
   });
 });

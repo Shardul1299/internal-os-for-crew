@@ -196,3 +196,14 @@ export function needsNextQuarterly(type: string, pendingQuarterlyDueDates: ISODa
 export function validateBlackout(b: { startsOn: ISODate; endsOn: ISODate }): GateResult {
   return gate(b.endsOn < b.startsOn ? ["End is before start"] : []);
 }
+
+/**
+ * roster pilot → partnership happens "at pilot end" (§4). canStartPartnership checks the Filter re-score
+ * and Owner approval; this adds the pilot-end date so a partnership can't start mid-pilot.
+ */
+export function canStartPartnershipNow(base: GateResult, pilotEndsOn: ISODate | null, today: ISODate): GateResult {
+  const r = [...base.reasons];
+  if (!pilotEndsOn) r.push("Pilot end date missing");
+  else if (today < pilotEndsOn) r.push(`Pilot ends ${pilotEndsOn}`);
+  return gate(r);
+}
