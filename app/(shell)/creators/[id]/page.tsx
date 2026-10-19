@@ -87,7 +87,9 @@ export default async function CreatorRecord({ params, searchParams }: { params: 
   const agreement = tab === "agreement" || tab === "checkins" || me.role === "owner" ? await creatorAgreement(id) : null;
   const partnership = agreement?.status === "pilot" && canStartPartnershipNow(canStartPartnership(cfg, summary.facts, { role: me.role as never, today }), agreement.pilotEndsOn, today).ok;
   let primary: React.ReactNode = null;
-  if (approve)
+  const holding = tab === "checkins" && !!one(sp.hold);
+  if (holding) primary = null;
+  else if (approve)
     primary = (
       <SheetForm
         title="Approve roster"

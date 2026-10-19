@@ -99,7 +99,7 @@ export function CheckinsTab({
               </Link>
             }
           >
-            <Select name="filterRescoreId" defaultValue={scores[0]?.id ?? ""}>
+            <Select name="filterRescoreId" defaultValue="">
               <option value="">None</option>
               {scores.map((s) => (
                 <option key={s.id} value={s.id}>
