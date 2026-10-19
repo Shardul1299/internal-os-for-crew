@@ -1,0 +1,1 @@
+ALTER TABLE "deal_quote_lines" ADD COLUMN "manual_total_paise" bigint;

@@ -1,0 +1,195 @@
+@import "tailwindcss";
+
+/* Crew brand tokens — BRIEF §13.2. Dark is the primary theme; light is first-class. */
+:root {
+  --ink: #0b0b0b;
+  --ink-2: #1a1917;
+  --ink-3: #262421;
+  --beige: #f6e8cd;
+  --beige-2: #cfc2a9;
+  --beige-3: #8c8370;
+  --pink: #ff409b;
+  --pink-soft: rgb(255 64 155 / 0.16);
+  --pink-fg: var(--pink); /* pink used as text */
+
+  /* Semantic roles (dark) */
+  --bg: var(--ink);
+  --raised: var(--ink-2);
+  --block: var(--ink-3);
+  --fg: var(--beige);
+  --fg-2: var(--beige-2);
+  --fg-3: var(--beige-3);
+  --rule: var(--ink-3);
+  --head-bg: var(--beige);
+  --head-fg: var(--ink);
+  --on-pink: #0b0b0b;
+  color-scheme: dark;
+}
+
+:root[data-theme="light"] {
+  --bg: var(--beige);
+  --raised: #efdfc1;
+  --block: #e6d4b2;
+  --fg: var(--ink);
+  --fg-2: #3a3631;
+  --fg-3: #6e6656;
+  --rule: #d9c7a5;
+  --head-bg: var(--ink);
+  --head-fg: var(--beige);
+  /* Same pink for fills (§13.2). BRIEF: clarify — #FF409B on beige is ~2.9:1, under the
+     §13.7 contrast floor, so pink *text* in the light theme uses a deeper shade of the same hue. */
+  --pink-fg: #c4005f;
+  --pink-soft: rgb(255 64 155 / 0.18);
+  color-scheme: light;
+}
+
+@theme inline {
+  --color-bg: var(--bg);
+  --color-raised: var(--raised);
+  --color-block: var(--block);
+  --color-fg: var(--fg);
+  --color-fg-2: var(--fg-2);
+  --color-fg-3: var(--fg-3);
+  --color-rule: var(--rule);
+  --color-pink: var(--pink);
+  --color-pink-soft: var(--pink-soft);
+  --color-pink-fg: var(--pink-fg);
+  --color-head-bg: var(--head-bg);
+  --color-head-fg: var(--head-fg);
+  --color-on-pink: var(--on-pink);
+  --font-display: "Archivo Black", "Inter Tight", "Arial Black", Impact, sans-serif;
+  --font-sans: -apple-system, "SF Pro Text", "Inter Variable", Inter, Arial, sans-serif;
+  --radius-none: 0;
+}
+
+* {
+  border-radius: 0 !important; /* square corners everywhere (§13.4) */
+  box-shadow: none !important;
+}
+
+html,
+body {
+  background: var(--bg);
+  color: var(--fg);
+  font-family: var(--font-sans);
+  font-size: 13px;
+  line-height: 18px;
+  -webkit-font-smoothing: antialiased;
+  font-feature-settings: "tnum" 1, "cv11" 1;
+}
+
+/* Headlines: heavy condensed, uppercase, tight tracking — screen titles, big numbers, section marks. */
+.t-display {
+  font-family: var(--font-display);
+  text-transform: uppercase;
+  letter-spacing: -0.01em;
+  font-weight: 400;
+}
+.t-title {
+  font-family: var(--font-display);
+  text-transform: uppercase;
+  font-size: 22px;
+  line-height: 26px;
+  letter-spacing: -0.005em;
+}
+.t-big {
+  font-family: var(--font-display);
+  font-size: clamp(40px, 5vw, 64px);
+  line-height: 0.92;
+  letter-spacing: -0.02em;
+  font-variant-numeric: tabular-nums;
+}
+.t-headline {
+  font-size: 15px;
+  line-height: 20px;
+  font-weight: 600;
+}
+.t-callout {
+  font-size: 12px;
+  line-height: 16px;
+}
+.t-caption {
+  font-size: 11px;
+  line-height: 14px;
+  color: var(--fg-3);
+}
+/* Small labels: caps with wide tracking, pink or beige-3 (§13.3). */
+.t-label {
+  font-size: 10px;
+  line-height: 12px;
+  letter-spacing: 0.3em;
+  text-transform: uppercase;
+  color: var(--fg-3);
+  font-weight: 600;
+}
+.num {
+  font-variant-numeric: tabular-nums;
+}
+
+:focus-visible {
+  outline: 2px solid var(--pink);
+  outline-offset: 1px;
+  box-shadow: 0 0 0 4px var(--pink-soft) !important;
+}
+
+::selection {
+  background: var(--pink-soft);
+}
+
+@layer base {
+  input,
+  select,
+  textarea,
+  button {
+    font: inherit;
+    color: inherit;
+  }
+
+  input::placeholder,
+  textarea::placeholder {
+    color: var(--fg-3);
+  }
+}
+
+/* Scrollbars recede */
+* {
+  scrollbar-width: thin;
+  scrollbar-color: var(--block) transparent;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    transition-duration: 0.01ms !important;
+  }
+}
+
+/* The one orchestrated moment: the screen title settles on load. */
+@keyframes title-in {
+  from {
+    opacity: 0;
+    transform: translateY(6px);
+    letter-spacing: 0.04em;
+  }
+  to {
+    opacity: 1;
+    transform: none;
+    letter-spacing: -0.005em;
+  }
+}
+.title-in {
+  animation: title-in 420ms cubic-bezier(0.2, 0.7, 0.1, 1) both;
+}
+
+@media print {
+  html,
+  body {
+    background: #fff;
+    color: #000;
+  }
+  .no-print {
+    display: none !important;
+  }
+}
