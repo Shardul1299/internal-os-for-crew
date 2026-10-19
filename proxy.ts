@@ -2,7 +2,8 @@
 // cookie exists; role checks and scoping happen in layouts, queries and server actions.
 import { NextResponse, type NextRequest } from "next/server";
 
-const PUBLIC = ["/signin", "/api/auth", "/api/inbox/inbound", "/_next", "/favicon", "/icon"];
+// /api/calendar/[token] and /api/inbox/inbound authenticate themselves (signed token / shared secret).
+const PUBLIC = ["/signin", "/api/auth", "/api/inbox/inbound", "/api/calendar", "/_next", "/favicon", "/icon"];
 
 export function proxy(req: NextRequest) {
   const { pathname } = req.nextUrl;
