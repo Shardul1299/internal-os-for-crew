@@ -1,0 +1,1 @@
+ALTER TABLE "deliverable_metrics" ADD COLUMN "studio_post_id" uuid;
