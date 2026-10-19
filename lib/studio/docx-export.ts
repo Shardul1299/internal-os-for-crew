@@ -34,7 +34,7 @@ import {
   buildKeywordBankPrompt,
   buildTopicResearchPrompt,
   buildProblemResearchPrompt,
-  buildIndustryEntrySeriesPrompt,
+  buildSignatureSeriesPrompt,
   buildRawIdeaDeveloperPrompt,
   buildBioPrompt,
   buildManyChatMessagePrompt,
@@ -206,7 +206,7 @@ export function buildPromptLibraryDoc(brand: BrandConfig) {
   const exampleSubniche = brand.subniches[0] || "[SUB-NICHE]";
 
   const children: Paragraph[] = [
-    h1("Upforge Content OS — Master Prompt Library"),
+    h1("Creator Studio — Prompt Library"),
     p(`Generated for ${brand.nameField}. Every prompt below is pre-filled with your real brand context (niche, sub-niches, founder story, proprietary value) — replace the bracketed placeholders with your specifics and paste into Gemini, Claude, or ChatGPT.`),
   ];
 
@@ -283,8 +283,8 @@ export function buildPromptLibraryDoc(brand: BrandConfig) {
   });
   children.push(h2("Journey series formats"));
   JOURNEY_SERIES_FORMATS.forEach((f) => children.push(label(f.name, f.description)));
-  children.push(h2('Signature series builder — "How to Enter an Industry"'));
-  children.push(promptBlock(buildIndustryEntrySeriesPrompt(brand, { industry: "[INDUSTRY]", episodes: 5 })));
+  children.push(h2("Signature series builder"));
+  children.push(promptBlock(buildSignatureSeriesPrompt(brand, { seriesName: "[SERIES NAME]", subject: "[SUBJECT]", episodes: 5 })));
 
   // 5. Production
   children.push(h1("5. Production"));
@@ -316,9 +316,9 @@ export function buildPromptLibraryDoc(brand: BrandConfig) {
 
   // 9. Tools & Integrations
   children.push(h1("9. Tools & Integrations"));
-  children.push(p("Every tool the playbook names, and its status in this app."));
+  children.push(p("Every tool the playbook names, and its status in Studio."));
   TOOLS.forEach((t) => {
-    children.push(h3(`${t.name} — ${t.status === "connected" ? "connected in-app" : t.status === "planned" ? "future / planned" : "manual (external)"}`));
+    children.push(h3(`${t.name} — ${t.status === "connected" ? "in Studio" : t.status === "planned" ? "planned, not built" : "manual (external)"}`));
     children.push(label("Purpose", t.purpose));
     children.push(p(t.note));
   });
