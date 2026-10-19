@@ -117,9 +117,12 @@ export function ActionForm({
   const router = useRouter();
   const ref = useRef<HTMLFormElement>(null);
   const last = useRef<ActionResult | null>(null);
+  const snapshot = useRef<FormData | null>(null);
   useEffect(() => {
     if (!state || state === last.current) return;
     last.current = state;
+    // React resets uncontrolled fields after every form action; a failed submit must not lose what was typed.
+    if (!state.ok && snapshot.current && ref.current) restoreFields(ref.current, snapshot.current);
     if (state.ok) {
       feedback(state);
       if (resetOnSuccess) ref.current?.reset();
@@ -128,7 +131,14 @@ export function ActionForm({
     }
   }, [state, feedback, onDone, resetOnSuccess, router]);
   return (
-    <form ref={ref} action={formAction} className={className}>
+    <form
+      ref={ref}
+      action={formAction}
+      className={className}
+      onSubmit={(e) => {
+        snapshot.current = new FormData(e.currentTarget);
+      }}
+    >
       {children}
       {state && !state.ok ? (
         <p className="t-caption text-pink-fg mt-2" role="alert">
@@ -137,6 +147,18 @@ export function ActionForm({
       ) : null}
     </form>
   );
+}
+
+function restoreFields(form: HTMLFormElement, fd: FormData) {
+  for (const el of Array.from(form.elements)) {
+    if (!(el instanceof HTMLInputElement || el instanceof HTMLTextAreaElement || el instanceof HTMLSelectElement) || !el.name) continue;
+    if (el instanceof HTMLInputElement && (el.type === "hidden" || el.type === "file" || el.type === "submit")) continue;
+    if (el instanceof HTMLInputElement && (el.type === "checkbox" || el.type === "radio")) el.checked = fd.getAll(el.name).includes(el.value);
+    else {
+      const v = fd.get(el.name);
+      if (typeof v === "string") el.value = v;
+    }
+  }
 }
 
 /** A single-button action (e.g. "Approve"), bound with hidden fields. */
