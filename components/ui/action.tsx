@@ -1,7 +1,7 @@
 "use client";
 // ActionForm — every write is a server action (§14). Errors render as one inline caption.
 // Reversible actions show a single undo line for 10 seconds (⌘Z); there is no toast stack.
-import { createContext, startTransition, useActionState, useCallback, useContext, useEffect, useRef, useState, type ReactNode } from "react";
+import { createContext, useActionState, useCallback, useContext, useEffect, useRef, useState, useTransition, type ReactNode } from "react";
 import { useFormStatus } from "react-dom";
 import { useRouter } from "next/navigation";
 import type { ActionResult } from "@/lib/actions/result";
@@ -90,13 +90,14 @@ export function useResultFeedback() {
   );
 }
 
-// Pending state for forms submitted through ActionForm's onSubmit (useFormStatus only sees native form actions).
-const PendingCtx = createContext(false);
+// ActionForm submits through a transition (so React doesn't wipe the inputs on an error), which
+// useFormStatus can't see — the pending state is passed down through this context instead.
+const PendingCtx = createContext<boolean | null>(null);
 
 export function SubmitButton({ children, variant = "primary", size, className, pendingLabel }: { children: ReactNode; variant?: "primary" | "plain" | "quiet" | "danger"; size?: "sm" | "md"; className?: string; pendingLabel?: string }) {
-  const status = useFormStatus();
+  const { pending: formPending } = useFormStatus();
   const ctxPending = useContext(PendingCtx);
-  const pending = status.pending || ctxPending;
+  const pending = ctxPending ?? formPending;
   return (
     <Button type="submit" variant={variant} size={size} disabled={pending} className={className}>
       {pending ? (pendingLabel ?? "Saving…") : children}
@@ -117,35 +118,47 @@ export function ActionForm({
   onDone?: (r: ActionResult) => void;
   resetOnSuccess?: boolean;
 }) {
-  const [state, formAction, isPending] = useActionState(action, null);
   const feedback = useResultFeedback();
   const router = useRouter();
+  // Feedback and redirects run as soon as the action returns, so they still happen when the
+  // revalidated page no longer renders this form (e.g. an "Activate" button that disappears).
+  const run = useCallback(
+    async (prev: ActionResult | null, fd: FormData) => {
+      const r = await action(prev, fd);
+      if (r.ok) {
+        feedback(r);
+        if (r.redirect) router.push(r.redirect);
+      }
+      return r;
+    },
+    [action, feedback, router],
+  );
+  const [state, formAction, isPending] = useActionState(run, null);
+  const [, startTransition] = useTransition();
   const ref = useRef<HTMLFormElement>(null);
   const last = useRef<ActionResult | null>(null);
   useEffect(() => {
     if (!state || state === last.current) return;
     last.current = state;
     if (state.ok) {
-      feedback(state);
-      if (resetOnSuccess) ref.current?.reset();
-      if (state.redirect) router.push(state.redirect);
+      // React used to reset every action form after it ran; keep that on success only, so a failed
+      // submit keeps what the person typed. resetOnSuccess is kept for API compatibility.
+      void resetOnSuccess;
+      ref.current?.reset();
       onDone?.(state);
     }
-  }, [state, feedback, onDone, resetOnSuccess, router]);
-  // Dispatch from onSubmit rather than the native form action: React resets every uncontrolled field
-  // after a form action completes, which wiped the user's input when the server returned an error.
-  // Successful submits still reset when `resetOnSuccess` is set (above).
+  }, [state, onDone, resetOnSuccess]);
   return (
     <PendingCtx.Provider value={isPending}>
       <form
         ref={ref}
         action={formAction}
-        className={className}
         onSubmit={(e) => {
           e.preventDefault();
           const fd = new FormData(e.currentTarget, (e.nativeEvent as SubmitEvent).submitter);
           startTransition(() => formAction(fd));
         }}
+        className={className}
       >
         {children}
         {state && !state.ok ? (

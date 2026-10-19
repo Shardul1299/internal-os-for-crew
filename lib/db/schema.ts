@@ -417,6 +417,7 @@ export const programCohorts = pgTable("program_cohorts", {
   endsOn: date("ends_on").notNull(),
   counterpartName: text("counterpart_name"),
   counterpartEmail: text("counterpart_email"),
+  costPaise: money("cost_paise").notNull().default(0), // Program cost to date (quarterly report)
   ...audit,
 });
 
@@ -449,11 +450,13 @@ export const programEntries = pgTable("program_entries", {
   rank: integer("rank"),
   outcome: entryOutcomeEnum("outcome"),
   outcomeNote: text("outcome_note"),
+  dealId: uuid("deal_id"), // the paid lead created when the brand commissions this entry
   ...audit,
 });
 
 export const programSundayShoots = pgTable("program_sunday_shoots", {
   id: uuid("id").primaryKey().defaultRandom(),
+  cohortId: uuid("cohort_id").references(() => programCohorts.id),
   date: date("date").notNull(),
   location: text("location").notNull(),
   creators: uuid("creators").array().notNull().default([]),

@@ -188,10 +188,27 @@ body {
 }
 
 @media print {
+  /* Paper is white in either theme: print with the light-theme roles so text stays dark. */
+  :root,
+  :root[data-theme="light"] {
+    --bg: #fff;
+    --raised: #fff;
+    --block: #f3ead8;
+    --fg: #0b0b0b;
+    --fg-2: #3a3631;
+    --fg-3: #6e6656;
+    --rule: #d9c7a5;
+    --head-bg: #0b0b0b;
+    --head-fg: #f6e8cd;
+    --pink-fg: #c4005f;
+    color-scheme: light;
+  }
   html,
   body {
     background: #fff;
     color: #000;
+    print-color-adjust: exact;
+    -webkit-print-color-adjust: exact;
   }
   .no-print {
     display: none !important;
