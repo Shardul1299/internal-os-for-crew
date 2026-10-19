@@ -39,13 +39,13 @@ export default async function MonthEndPage({ searchParams }: { searchParams: Pro
       <Section title="Money">
         <div className="grid grid-cols-2 md:grid-cols-4 gap-px bg-rule">
           <Block>
-            <Stat label="Signed" value={moneyShort(m.signedPaise)} caption={`${m.signedN} deals`} />
+            <Stat label="Signed" value={moneyShort(m.signedPaise)} caption={`${m.signedN} ${m.signedN === 1 ? "deal" : "deals"}`} />
           </Block>
           <Block>
-            <Stat label="Collected" value={moneyShort(m.collectedPaise)} caption={`${m.collectedN} invoices`} />
+            <Stat label="Collected" value={moneyShort(m.collectedPaise)} caption={`${m.collectedN} ${m.collectedN === 1 ? "invoice" : "invoices"}`} />
           </Block>
           <Block>
-            <Stat label="Outstanding" value={moneyShort(m.outstandingPaise)} caption={`${m.outstandingN} invoices`} />
+            <Stat label="Outstanding" value={moneyShort(m.outstandingPaise)} caption={`${m.outstandingN} ${m.outstandingN === 1 ? "invoice" : "invoices"}`} />
           </Block>
           <Block>
             <Stat label="Overdue" value={moneyShort(m.overduePaise)} caption={m.overdueN ? <Alert>{m.overdueN} overdue</Alert> : "None"} />
@@ -54,7 +54,7 @@ export default async function MonthEndPage({ searchParams }: { searchParams: Pro
       </Section>
 
       <Section title="Roster" aside="As of today">
-        <div className={`grid grid-cols-1 ${showTier ? "md:grid-cols-3" : "md:grid-cols-2"} gap-px bg-rule`}>
+        <div className={`grid grid-cols-1 ${showTier ? "md:grid-cols-3 print:grid-cols-2" : "md:grid-cols-2"} gap-px bg-rule`}>
           <CountTable title="By stage" rows={r.roster.byStage} labels={STAGE_LABEL} />
           {/* BRIEF: clarify — §10 asks for roster by tier, but tier never appears in a PDF (§0.1 #6): shown on screen to tier roles, omitted from print. */}
           {showTier ? <CountTable title="By tier · roster + incubation" rows={r.roster.byTier} className="no-print" /> : null}

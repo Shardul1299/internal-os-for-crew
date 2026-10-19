@@ -5,6 +5,7 @@ import { db } from "@/lib/db";
 import * as s from "@/lib/db/schema";
 import { getConfig } from "@/lib/settings";
 import { rankEntries, routeOutcome, maskedBrand, brandVisibleTo, sundayCadence } from "@/lib/rules/program";
+import { assertNoInternal } from "@/lib/rules/visibility";
 import { today as todayISO, toISO } from "@/lib/dates";
 import { money, date, SUB_CATEGORY_LABEL, STAGE_LABEL, label } from "@/lib/format";
 
@@ -244,7 +245,7 @@ export async function getCounterpartRows(cohortIds: string[]): Promise<Counterpa
     .orderBy(asc(s.creators.displayName));
   const t = todayISO();
   const shoots = await db.select({ date: s.programSundayShoots.date, creators: s.programSundayShoots.creators }).from(s.programSundayShoots).where(isNull(s.programSundayShoots.archivedAt));
-  return rows
+  const out: CounterpartRow[] = rows
     .filter((r) => r.creatorConsent !== "withdrawn")
     .map((r) => {
       const next = shoots.filter((sh) => sh.date >= t && sh.creators.includes(r.creatorId)).sort((a, b) => (a.date < b.date ? -1 : 1))[0];
@@ -260,6 +261,8 @@ export async function getCounterpartRows(cohortIds: string[]): Promise<Counterpa
         nextShoot: next?.date ?? null,
       };
     });
+  assertNoInternal(out); // the visibility wall: no tier, rungs, money or individual scores leave for the counterpart
+  return out;
 }
 
 // ---------- Quarterly Program report (§7.9) ----------
