@@ -14,7 +14,7 @@ export function useUndo() {
   return useContext(UndoCtx);
 }
 
-export function UndoProvider({ children, undoAction }: { children: ReactNode; undoAction: (entity: string, id: string) => Promise<ActionResult> }) {
+export function UndoProvider({ children, undoAction }: { children: ReactNode; undoAction: (entity: string, id: string, token?: string) => Promise<ActionResult> }) {
   const [slot, setSlot] = useState<UndoSlot>(null);
   const timer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const router = useRouter();
@@ -69,8 +69,8 @@ export function UndoProvider({ children, undoAction }: { children: ReactNode; un
   );
 }
 
-let undoActionRef: ((entity: string, id: string) => Promise<ActionResult>) | null = null;
-function UndoBridge({ undoAction }: { undoAction: (entity: string, id: string) => Promise<ActionResult> }) {
+let undoActionRef: ((entity: string, id: string, token?: string) => Promise<ActionResult>) | null = null;
+function UndoBridge({ undoAction }: { undoAction: (entity: string, id: string, token?: string) => Promise<ActionResult> }) {
   undoActionRef = undoAction;
   return null;
 }
@@ -83,7 +83,7 @@ export function useResultFeedback() {
       if (!r || !r.ok) return;
       if (r.message) {
         const u = r.undo;
-        show({ message: r.message, undo: u && undoActionRef ? () => undoActionRef!(u.entity, u.id) : undefined });
+        show({ message: r.message, undo: u && undoActionRef ? () => undoActionRef!(u.entity, u.id, u.token) : undefined });
       }
     },
     [show],

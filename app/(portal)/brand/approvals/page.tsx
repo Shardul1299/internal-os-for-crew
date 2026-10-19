@@ -1,4 +1,4 @@
-import { requireMe } from "@/lib/session";
+import { requireBrand } from "@/lib/session";
 import { portalApprovals } from "@/lib/queries/brand-portal";
 import { ScreenHeader, Section, Block, Caption, EmptyState, Markdown, Textarea } from "@/components/ui";
 import { ActionButton, ActionForm, SubmitButton } from "@/components/ui/client";
@@ -11,8 +11,8 @@ export const dynamic = "force-dynamic";
 const DISCLOSURE: Record<string, string> = { asci: "ASCI", ftc: "FTC", both: "ASCI and FTC" };
 
 export default async function ApprovalsPage() {
-  const me = await requireMe();
-  const rows = await portalApprovals(me.brandId!);
+  const me = await requireBrand();
+  const rows = await portalApprovals(me.brandId);
   return (
     <>
       <ScreenHeader title="Approvals" number={rows.length || undefined} numberCaption={rows.length ? "awaiting you" : undefined}>

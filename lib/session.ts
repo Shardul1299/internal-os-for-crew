@@ -59,3 +59,10 @@ export async function actor(what?: keyof typeof ROLE_CAN): Promise<Me> {
   if (what && !can(me.role, what)) throw new Error("Your role can't do that");
   return me;
 }
+
+/** Brand portal pages: brand_user with a brand scope, checked on every page (not only the layout). */
+export async function requireBrand(): Promise<Me & { brandId: string }> {
+  const me = await requireMe();
+  if (me.role !== "brand_user" || !me.brandId) redirect(homeFor(me.role) === "/brand" ? "/signin" : homeFor(me.role));
+  return me as Me & { brandId: string };
+}

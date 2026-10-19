@@ -1,5 +1,5 @@
 import { notFound } from "next/navigation";
-import { requireMe } from "@/lib/session";
+import { requireBrand } from "@/lib/session";
 import { portalCampaign } from "@/lib/queries/brand-portal";
 import { PLATFORM_LABEL } from "@/lib/queries/campaigns";
 import { ScreenHeader, Section, Table, THead, TH, TR, TD, EmptyState, Meta, ButtonLink } from "@/components/ui";
@@ -11,10 +11,10 @@ export const dynamic = "force-dynamic";
 const STATUS: Record<string, string> = { briefed: "Briefed", drafting: "Drafting", in_review: "Awaiting you", approved: "Approved", scheduled: "Scheduled", live: "Live", reported: "Reported" };
 
 export default async function BrandCampaignPage({ params }: { params: Promise<{ id: string }> }) {
-  const me = await requireMe();
+  const me = await requireBrand();
   const { id } = await params;
   if (!/^[0-9a-f-]{36}$/i.test(id)) notFound();
-  const data = await portalCampaign(me.brandId!, id);
+  const data = await portalCampaign(me.brandId, id);
   if (!data) notFound();
   const { campaign, deliverables } = data;
   const waiting = deliverables.filter((d) => d.status === "in_review" && !d.claimsApproved).length;

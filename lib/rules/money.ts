@@ -164,13 +164,21 @@ export function canIssueBalance(d: { completed: boolean; signedTotalPaise: numbe
   return gate(r);
 }
 
-export function canRecordPayment(inv: { status: string }, amountPaise: number): GateResult {
+/** A receipt against an invoice. Partial receipts accumulate; nothing over the amount due. */
+export function canRecordPayment(inv: { status: string; amountPaise: number; paidAmountPaise: number | null }, amountPaise: number): GateResult {
   const r: string[] = [];
   if (inv.status === "paid") r.push("Invoice already paid");
   if (inv.status === "void") r.push("Invoice is void");
   if (inv.status === "draft") r.push("Mark the invoice sent first");
   if (!Number.isFinite(amountPaise) || amountPaise <= 0) r.push("Amount required");
+  else if ((inv.paidAmountPaise ?? 0) + amountPaise > inv.amountPaise) r.push("More than the amount still due");
   return gate(r);
+}
+
+/** After a receipt: the invoice is paid only once receipts cover the full amount (§0.1 #12). */
+export function afterReceipt(inv: { amountPaise: number; paidAmountPaise: number | null }, amountPaise: number) {
+  const received = (inv.paidAmountPaise ?? 0) + amountPaise;
+  return { received, fullyPaid: received >= inv.amountPaise };
 }
 
 /** Payouts exist only after a receipt; paying one needs it due and a reference. */

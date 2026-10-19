@@ -8,7 +8,7 @@ import * as s from "@/lib/db/schema";
 import { withUser } from "@/lib/db/tx";
 import { actor } from "@/lib/session";
 import { getConfig } from "@/lib/settings";
-import { advanceInvoice, balanceInvoice, canIssueAdvance, canIssueBalance, canMarkPayoutPaid, canRecordPayment } from "@/lib/rules/money";
+import { advanceInvoice, afterReceipt, balanceInvoice, canIssueAdvance, canIssueBalance, canMarkPayoutPaid, canRecordPayment } from "@/lib/rules/money";
 import { stageIndex } from "@/lib/rules/deals";
 import { money, rupeesToPaise, humanize } from "@/lib/format";
 import { today } from "@/lib/dates";
@@ -109,16 +109,23 @@ export async function recordPayment(_prev: ActionResult | null, fd: FormData): P
     if (v.paidOn > today()) return fail("Payment date is in the future");
     const [deal] = await db.select().from(s.deals).where(eq(s.deals.id, inv.dealId));
     let generated = 0;
+    const { received, fullyPaid } = afterReceipt(inv, amount);
     await withUser(me.id, async (tx) => {
-      await tx.update(s.invoices).set({ status: "paid", paidOn: v.paidOn, paidAmountPaise: amount, reference: v.reference }).where(eq(s.invoices.id, inv.id));
-      await logActivity(tx, inv.dealId, me.id, "note", `Payment recorded on ${inv.number} · ${money(amount, inv.currency)} · ${v.reference}`);
-      // Payouts generated from the receipt: advance → fee_advance; balance → fee_balance + upsell/referral shares.
+      const reference = inv.reference ? `${inv.reference}; ${v.reference}` : v.reference;
+      await tx
+        .update(s.invoices)
+        .set({ status: fullyPaid ? "paid" : inv.status, paidOn: v.paidOn, paidAmountPaise: received, reference })
+        .where(eq(s.invoices.id, inv.id));
+      await logActivity(tx, inv.dealId, me.id, "note", `Payment recorded on ${inv.number} · ${money(amount, inv.currency)} · ${v.reference}${fullyPaid ? "" : ` · ${money(inv.amountPaise - received, inv.currency)} still due`}`);
+      // Payouts are generated only once receipts cover the invoice — never ahead of them.
+      if (!fullyPaid) return;
+      // Advance → fee_advance; balance → fee_balance + upsell/referral shares.
       if (inv.kind === "advance") generated = await generateAdvancePayouts(tx, cfg, deal, inv.id, v.paidOn, me.id);
       if (inv.kind === "balance") generated = await generateBalancePayouts(tx, cfg, deal, inv.id, v.paidOn, me.id);
       if (generated) await logActivity(tx, inv.dealId, me.id, "note", `${generated} creator payout${generated === 1 ? "" : "s"} generated from the ${inv.kind} receipt`);
     });
     paths(inv.dealId);
-    return ok(`Payment recorded${generated ? ` · ${generated} payout${generated === 1 ? "" : "s"} generated` : ""}`);
+    return ok(fullyPaid ? `Payment recorded${generated ? ` · ${generated} payout${generated === 1 ? "" : "s"} generated` : ""}` : `Part payment recorded · ${money(inv.amountPaise - received, inv.currency)} still due`);
   });
 }
 

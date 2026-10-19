@@ -191,6 +191,8 @@ export function canAdvance(cfg: RulesConfig, d: DealFacts, to: DealStage, today:
       if (!d.piecesPerMonth) r.push("Pieces per month missing");
       for (const u of d.usageRights) if (u.days > cfg.n.usage_max_days) r.push(`Usage over ${cfg.n.usage_max_days} days`);
       if (!d.sowMd?.trim() && !d.sowUrl?.trim()) r.push("SOW not generated");
+      // CLAUDE.md: nothing goes live without a *signed* SOW — the signed copy's link is the evidence.
+      else if (!d.sowUrl?.trim()) r.push("Signed SOW link missing");
       break;
     }
     case "advance_received": {

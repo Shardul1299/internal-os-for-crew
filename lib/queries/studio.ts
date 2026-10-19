@@ -12,7 +12,7 @@ import * as s from "@/lib/db/schema";
 import { withUser } from "@/lib/db/tx";
 import { actor, getMe, homeFor, requireMe, type Me } from "@/lib/session";
 import { getConfig } from "@/lib/settings";
-import { studioAccess, ratioMeters, outlierMultiple, type CalendarItemLite } from "@/lib/rules/studio";
+import { studioAccess, ratioMeters, outlierMultiple, draftLocked, type CalendarItemLite } from "@/lib/rules/studio";
 import { creatorFeeView } from "@/lib/rules/visibility";
 import { withBlockers, type DeliverableWithBlock } from "@/lib/queries/deliverables";
 import { toBrandConfig, type BrandConfig } from "@/lib/studio/brand";
@@ -423,4 +423,14 @@ export function docxResponse(buf: Buffer, filename: string) {
       "Cache-Control": "no-store",
     },
   });
+}
+
+/** Statuses of deliverables that use this script or carousel as their submitted draft. */
+export async function draftLockFor(ctx: StudioCtx, kind: "script" | "carousel", id: string) {
+  const col = kind === "script" ? s.deliverables.draftScriptId : s.deliverables.draftCarouselId;
+  const rows = await db
+    .select({ status: s.deliverables.status })
+    .from(s.deliverables)
+    .where(and(eq(col, id), eq(s.deliverables.creatorId, ctx.creatorId), isNull(s.deliverables.archivedAt)));
+  return draftLocked(rows.map((r) => r.status));
 }

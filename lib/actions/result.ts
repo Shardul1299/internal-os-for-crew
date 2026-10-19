@@ -1,8 +1,16 @@
+import { signUndo } from "../undo-token";
+
 export type ActionResult =
-  | { ok: true; message?: string; undo?: { entity: string; id: string }; redirect?: string; data?: unknown }
+  | { ok: true; message?: string; undo?: { entity: string; id: string; token?: string }; redirect?: string; data?: unknown }
   | { ok: false; error: string };
 
-export const ok = (message?: string, extra: Partial<Extract<ActionResult, { ok: true }>> = {}): ActionResult => ({ ok: true, message, ...extra });
+/** Success. An `undo` target gets a short-lived signed token so only this action's change can be undone. */
+export const ok = (message?: string, extra: Partial<Extract<ActionResult, { ok: true }>> = {}): ActionResult => ({
+  ok: true,
+  message,
+  ...extra,
+  ...(extra.undo ? { undo: { ...extra.undo, token: signUndo(extra.undo.entity, extra.undo.id) } } : {}),
+});
 export const fail = (error: string): ActionResult => ({ ok: false, error });
 
 /** Wraps an action body: thrown errors become one inline caption. */

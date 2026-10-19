@@ -90,7 +90,8 @@ describe("negotiation → signed", () => {
   const d = deal({ stage: "negotiation" });
   it("needs signed total, term, pieces and SOW", () => {
     expect(adv(d, "signed").ok).toBe(false);
-    expect(adv({ ...d, signedTotalPaise: 100_000_00, termStartsOn: "2026-11-01", termEndsOn: "2027-01-31", piecesPerMonth: 2, sowMd: "SOW" }, "signed").ok).toBe(true);
+    expect(adv({ ...d, signedTotalPaise: 100_000_00, termStartsOn: "2026-11-01", termEndsOn: "2027-01-31", piecesPerMonth: 2, sowMd: "SOW" }, "signed").reasons).toContain("Signed SOW link missing");
+    expect(adv({ ...d, signedTotalPaise: 100_000_00, termStartsOn: "2026-11-01", termEndsOn: "2027-01-31", piecesPerMonth: 2, sowMd: "SOW", sowUrl: "https://drive/sow-signed.pdf" }, "signed").ok).toBe(true);
   });
 });
 

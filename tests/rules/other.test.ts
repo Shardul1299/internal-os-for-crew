@@ -111,3 +111,13 @@ describe("studio §19", () => {
     expect(creatorCanEditCalendarField("organic", "date")).toBe(true);
   });
 });
+
+import { draftLocked } from "@/lib/rules/studio";
+describe("sponsored draft lock §19.6.7", () => {
+  it("freezes a draft under review or approved; a change request unlocks it", () => {
+    expect(draftLocked(["in_review"]).ok).toBe(false);
+    expect(draftLocked(["approved"]).ok).toBe(false);
+    expect(draftLocked(["drafting"]).ok).toBe(true);
+    expect(draftLocked([]).ok).toBe(true);
+  });
+});

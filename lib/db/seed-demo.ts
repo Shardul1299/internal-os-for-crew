@@ -221,6 +221,7 @@ async function main() {
         briefTags: ["agents", "productivity"],
         referralNote: ds.brand === "ledgerly" ? "Routed from OWLED Social account team" : null,
         sowMd: ds.signed ? "# Statement of work\nSigned." : null,
+        sowUrl: ds.signed ? "https://drive.example/sow-signed.pdf" : null,
         poReference: ds.stage === "in_production" || ds.stage === "reported" ? "PO-2026-0412" : null,
         noListCheck: ds.stage === "lead" ? null : noList,
         createdBy: lead.id,

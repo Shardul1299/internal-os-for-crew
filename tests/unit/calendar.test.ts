@@ -43,3 +43,15 @@ describe("csv export/import", () => {
     expect(csvRecords("Display Name,Sub category\nAsha,ai_educator\n")).toEqual([{ display_name: "Asha", sub_category: "ai_educator" }]);
   });
 });
+
+import { signUndo, verifyUndo } from "@/lib/undo-token";
+describe("undo tokens", () => {
+  it("only verify for the same row within the window", () => {
+    const t = signUndo("deals", "abc", 1_000);
+    expect(verifyUndo("deals", "abc", t, 5_000)).toBe(true);
+    expect(verifyUndo("deals", "abd", t, 5_000)).toBe(false);
+    expect(verifyUndo("creators", "abc", t, 5_000)).toBe(false);
+    expect(verifyUndo("deals", "abc", t, 20_000)).toBe(false);
+    expect(verifyUndo("deals", "abc", undefined)).toBe(false);
+  });
+});

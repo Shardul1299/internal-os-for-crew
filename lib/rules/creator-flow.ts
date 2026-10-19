@@ -209,3 +209,20 @@ export function canStartPartnershipNow(base: GateResult, pilotEndsOn: ISODate | 
   else if (today < pilotEndsOn) r.push(`Pilot ends ${pilotEndsOn}`);
   return gate(r);
 }
+
+export type AgreementStatus = "pilot" | "active" | "exit_window_open" | "exited";
+
+/**
+ * Agreement status moves outside the dedicated flows (§4). Pilot → active only via Start partnership
+ * (Filter re-score + Owner); exited only via roster → alumni; alumni → roster via the Owner's return flow.
+ * The plain edit allows: active → exit window open (Crew lead), exit window open → active (Owner, after review).
+ */
+export function canSetAgreementStatus(from: AgreementStatus, to: AgreementStatus, role: string, stage: string): GateResult {
+  if (from === to) return gate([]);
+  if (stage === "alumni") return gate(["Alumni agreements stay exited — return to Roster needs the Owner"]);
+  if (from === "pilot" && to === "active") return gate(["Use Start partnership: it needs the Filter re-score and the Owner"]);
+  if (from === "active" && to === "exit_window_open") return gate(["owner", "crew_lead"].includes(role) ? [] : ["Only the Crew lead opens the exit window"]);
+  if (from === "exit_window_open" && to === "active") return gate(role === "owner" ? [] : ["Only the Owner keeps a partnership after the exit-window review"]);
+  if (to === "exited") return gate(["Exit happens by moving the creator to Alumni"]);
+  return gate([`Agreement can't move from ${from.replace(/_/g, " ")} to ${to.replace(/_/g, " ")}`]);
+}

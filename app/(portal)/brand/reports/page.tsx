@@ -1,4 +1,4 @@
-import { requireMe } from "@/lib/session";
+import { requireBrand } from "@/lib/session";
 import { portalReports } from "@/lib/queries/brand-portal";
 import { ScreenHeader, Section, EmptyState, Markdown, Caption } from "@/components/ui";
 import { CredibilityStats } from "@/components/campaigns/CredibilityStats";
@@ -8,8 +8,8 @@ export const metadata = { title: "Reports" };
 export const dynamic = "force-dynamic";
 
 export default async function ReportsPage() {
-  const me = await requireMe();
-  const rows = await portalReports(me.brandId!);
+  const me = await requireBrand();
+  const rows = await portalReports(me.brandId);
   return (
     <>
       <ScreenHeader title="Reports" />

@@ -1,4 +1,4 @@
-import { requireMe } from "@/lib/session";
+import { requireBrand } from "@/lib/session";
 import { portalFeedback } from "@/lib/queries/brand-portal";
 import { canSubmitNps, feedbackAverage, quarterOf } from "@/lib/rules/campaigns";
 import { ScreenHeader, Section, Table, THead, TH, TR, TD, Caption, Meta } from "@/components/ui";
@@ -10,8 +10,8 @@ export const metadata = { title: "Feedback" };
 export const dynamic = "force-dynamic";
 
 export default async function FeedbackPage() {
-  const me = await requireMe();
-  const f = await portalFeedback(me.brandId!);
+  const me = await requireBrand();
+  const f = await portalFeedback(me.brandId);
   const t = today();
   const npsOpen = canSubmitNps(10, f.lastNpsOn, t).ok;
   return (

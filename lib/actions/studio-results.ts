@@ -48,9 +48,15 @@ async function syncMetrics(tx: Tx, postId: string, deliverableId: string | null,
     return;
   }
   // BRIEF: clarify — views are not written to impressions: Studio view counts never cross to Crew (§0.1 #16, §20).
-  const values = { deliverableId, saves: p.saves, shares: p.shares, commentsDecisionMaker: p.commentsDecisionMaker, inboundToBrand: p.inbound, trackedSignups: p.trackedSignups, capturedAt: new Date() };
-  if (existing) await tx.update(s.deliverableMetrics).set(values).where(eq(s.deliverableMetrics.id, existing.id));
-  else await tx.insert(s.deliverableMetrics).values({ ...values, studioPostId: postId, createdBy: userId });
+  const values = { deliverableId, studioPostId: postId, saves: p.saves, shares: p.shares, commentsDecisionMaker: p.commentsDecisionMaker, inboundToBrand: p.inbound, trackedSignups: p.trackedSignups, capturedAt: new Date() };
+  // One metrics record per sponsored post (§0.1 #17): reuse the deliverable's record if Crew already captured one.
+  const [forDeliverable] = existing
+    ? [existing]
+    : await tx.select({ id: s.deliverableMetrics.id }).from(s.deliverableMetrics).where(and(eq(s.deliverableMetrics.deliverableId, deliverableId), isNull(s.deliverableMetrics.archivedAt))).limit(1);
+  if (existing && existing.deliverableId !== deliverableId) await tx.update(s.deliverableMetrics).set({ archivedAt: new Date() }).where(eq(s.deliverableMetrics.id, existing.id));
+  const target = existing && existing.deliverableId === deliverableId ? existing : existing ? null : forDeliverable;
+  if (target) await tx.update(s.deliverableMetrics).set(values).where(eq(s.deliverableMetrics.id, target.id));
+  else await tx.insert(s.deliverableMetrics).values({ ...values, createdBy: userId });
 }
 
 export async function savePost(_prev: ActionResult | null, fd: FormData): Promise<ActionResult> {

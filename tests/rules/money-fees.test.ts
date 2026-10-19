@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { creatorFees, canIssueAdvance, canIssueBalance, canRecordPayment, canMarkPayoutPaid, referralFacts, advancePayouts } from "@/lib/rules/money";
+import { creatorFees, canIssueAdvance, canIssueBalance, canRecordPayment, afterReceipt, canMarkPayoutPaid, referralFacts, advancePayouts } from "@/lib/rules/money";
 import { cfg } from "./fixtures";
 
 describe("creator fees from quote lines", () => {
@@ -51,11 +51,17 @@ describe("invoice and payout gates", () => {
     expect(canIssueBalance({ completed: true, signedTotalPaise: 1, hasBalance: false }).ok).toBe(true);
   });
   it("payments only on sent invoices with an amount", () => {
-    expect(canRecordPayment({ status: "sent" }, 100).ok).toBe(true);
-    expect(canRecordPayment({ status: "overdue" }, 100).ok).toBe(true);
-    expect(canRecordPayment({ status: "draft" }, 100).ok).toBe(false);
-    expect(canRecordPayment({ status: "paid" }, 100).ok).toBe(false);
-    expect(canRecordPayment({ status: "sent" }, 0).ok).toBe(false);
+    const inv = { amountPaise: 1000, paidAmountPaise: null };
+    expect(canRecordPayment({ status: "sent", ...inv }, 100).ok).toBe(true);
+    expect(canRecordPayment({ status: "overdue", ...inv }, 100).ok).toBe(true);
+    expect(canRecordPayment({ status: "draft", ...inv }, 100).ok).toBe(false);
+    expect(canRecordPayment({ status: "paid", ...inv }, 100).ok).toBe(false);
+    expect(canRecordPayment({ status: "sent", ...inv }, 0).ok).toBe(false);
+    expect(canRecordPayment({ status: "sent", amountPaise: 1000, paidAmountPaise: 900 }, 200).ok).toBe(false);
+  });
+  it("a partial receipt leaves the invoice open and generates no payouts", () => {
+    expect(afterReceipt({ amountPaise: 1000, paidAmountPaise: null }, 1)).toEqual({ received: 1, fullyPaid: false });
+    expect(afterReceipt({ amountPaise: 1000, paidAmountPaise: 400 }, 600)).toEqual({ received: 1000, fullyPaid: true });
   });
   it("payouts paid with a reference, never twice", () => {
     expect(canMarkPayoutPaid({ status: "due" }, "UTR123").ok).toBe(true);

@@ -1,4 +1,4 @@
-import { requireMe } from "@/lib/session";
+import { requireBrand } from "@/lib/session";
 import { portalCampaigns } from "@/lib/queries/brand-portal";
 import { ScreenHeader, Table, THead, TH, TR, TD, EmptyState, Meta, Alert } from "@/components/ui";
 import { KeyRows } from "@/components/ui/client";
@@ -8,8 +8,8 @@ export const metadata = { title: "Campaigns" };
 export const dynamic = "force-dynamic";
 
 export default async function BrandCampaignsPage() {
-  const me = await requireMe();
-  const rows = await portalCampaigns(me.brandId!);
+  const me = await requireBrand();
+  const rows = await portalCampaigns(me.brandId);
   const awaiting = rows.reduce((t, r) => t + r.awaitingApproval, 0);
   return (
     <>

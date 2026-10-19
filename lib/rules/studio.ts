@@ -125,3 +125,14 @@ export function funnelDistribution(items: { funnelStage?: string | null; kind: s
   for (const i of items) if (i.kind !== "blackout" && i.kind !== "shoot") c[(i.funnelStage as "tofu" | "mofu" | "bofu") ?? "tofu"]++;
   return c;
 }
+
+/**
+ * A script or carousel submitted as a sponsored draft is frozen while the brand reviews it and after
+ * approval, so what goes live is what the brand approved (§0.1 #11, §19.6.7). A change request
+ * (status back to drafting) unlocks it.
+ */
+export const DRAFT_LOCKED_STATUSES = ["in_review", "approved", "scheduled", "live", "reported"] as const;
+
+export function draftLocked(deliverableStatuses: string[]): GateResult {
+  return gate(deliverableStatuses.some((st) => (DRAFT_LOCKED_STATUSES as readonly string[]).includes(st)) ? ["Locked — the brand is reviewing or has approved this draft"] : []);
+}

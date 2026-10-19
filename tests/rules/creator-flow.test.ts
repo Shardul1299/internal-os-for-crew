@@ -222,3 +222,17 @@ describe("same-day re-score (latestFilter)", () => {
     expect(canTransition(cfg, creator({ filterScores: [pass, fail] }), "watchlist", { role: "crew_lead", today: TODAY }).ok).toBe(true);
   });
 });
+
+import { canSetAgreementStatus } from "@/lib/rules/creator-flow";
+describe("agreement status moves (§4)", () => {
+  it("only Start partnership moves pilot to active; exited only via Alumni; Owner keeps after exit window", () => {
+    expect(canSetAgreementStatus("pilot", "active", "owner", "roster").ok).toBe(false);
+    expect(canSetAgreementStatus("exited", "active", "crew_lead", "alumni").ok).toBe(false);
+    expect(canSetAgreementStatus("exited", "active", "crew_lead", "roster").ok).toBe(false);
+    expect(canSetAgreementStatus("active", "exit_window_open", "crew_lead", "roster").ok).toBe(true);
+    expect(canSetAgreementStatus("exit_window_open", "active", "crew_lead", "roster").ok).toBe(false);
+    expect(canSetAgreementStatus("exit_window_open", "active", "owner", "roster").ok).toBe(true);
+    expect(canSetAgreementStatus("active", "exited", "owner", "roster").ok).toBe(false);
+    expect(canSetAgreementStatus("active", "active", "crew_lead", "roster").ok).toBe(true);
+  });
+});

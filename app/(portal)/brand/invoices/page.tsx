@@ -1,4 +1,4 @@
-import { requireMe } from "@/lib/session";
+import { requireBrand } from "@/lib/session";
 import { portalInvoices } from "@/lib/queries/brand-portal";
 import { ScreenHeader, Table, THead, TH, TR, TD, EmptyState, Meta, Alert } from "@/components/ui";
 import { date, money, moneyShort, humanize } from "@/lib/format";
@@ -7,8 +7,8 @@ export const metadata = { title: "Invoices" };
 export const dynamic = "force-dynamic";
 
 export default async function InvoicesPage() {
-  const me = await requireMe();
-  const rows = await portalInvoices(me.brandId!);
+  const me = await requireBrand();
+  const rows = await portalInvoices(me.brandId);
   const outstanding = rows.filter((r) => r.status !== "paid").reduce((t, r) => t + r.amountPaise, 0);
   const currency = rows[0]?.currency ?? "INR";
   return (

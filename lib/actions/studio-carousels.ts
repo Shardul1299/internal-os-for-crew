@@ -6,7 +6,7 @@ import * as s from "@/lib/db/schema";
 import { db } from "@/lib/db";
 import { withUser, type Tx } from "@/lib/db/tx";
 import { guard, ok, fail, type ActionResult } from "./result";
-import { studioActor, carouselFor, type StudioCtx } from "@/lib/queries/studio";
+import { studioActor, carouselFor, draftLockFor, type StudioCtx } from "@/lib/queries/studio";
 import { parseCarouselSlides } from "@/lib/studio/parse";
 import { CAROUSEL_ARCHETYPES, CAROUSEL_BACKGROUND_STYLES, CAROUSEL_CTA_TYPES } from "@/lib/studio/carousel-reference";
 import { formObject, funnel, parse, pillar, contentType, revalidateStudio, scriptStatus, text, uuid } from "./studio-helpers";
@@ -40,6 +40,12 @@ async function writeSlides(tx: Tx, carouselId: string, slides: z.infer<typeof Sl
 async function ownCarousel(ctx: StudioCtx, id: string) {
   const c = await carouselFor(ctx, id);
   return c && !c.readOnly ? c : null;
+}
+
+/** A carousel submitted as a sponsored draft can't change while the brand reviews or after approval. */
+async function assertUnlocked(ctx: StudioCtx, id: string) {
+  const lock = await draftLockFor(ctx, "carousel", id);
+  if (!lock.ok) throw new Error(lock.reasons[0]);
 }
 
 /** Save a generated carousel: slides parsed from HOOK / BODY / CTA blocks. */
@@ -76,6 +82,7 @@ export async function updateCarousel(_prev: ActionResult | null, fd: FormData): 
     const raw = formObject(fd);
     const c = await ownCarousel(ctx, parse(uuid, raw.id));
     if (!c) return fail("Starter carousels are read-only; clone it first");
+    await assertUnlocked(ctx, c.id);
     const meta = parse(Meta, raw);
     await withUser(ctx.me.id, (tx) => tx.update(s.studioCarousels).set({ ...meta, title: meta.title || c.title }).where(and(eq(s.studioCarousels.id, c.id), eq(s.studioCarousels.creatorId, ctx.creatorId))));
     revalidateStudio();
@@ -88,6 +95,7 @@ export async function saveSlides(_prev: ActionResult | null, fd: FormData): Prom
     const ctx = await studioActor();
     const c = await ownCarousel(ctx, parse(uuid, fd.get("id")));
     if (!c) return fail("Starter carousels are read-only; clone it first");
+    await assertUnlocked(ctx, c.id);
     let data: unknown;
     try {
       data = JSON.parse(String(fd.get("slides") ?? "[]"));
@@ -141,6 +149,7 @@ export async function removeCarousel(_prev: ActionResult | null, fd: FormData): 
     const id = parse(uuid, fd.get("id"));
     const [c] = await db.select({ id: s.studioCarousels.id }).from(s.studioCarousels).where(and(eq(s.studioCarousels.id, id), eq(s.studioCarousels.creatorId, ctx.creatorId), isNull(s.studioCarousels.archivedAt)));
     if (!c) return fail("Carousel not found");
+    await assertUnlocked(ctx, c.id);
     await withUser(ctx.me.id, (tx) => tx.update(s.studioCarousels).set({ archivedAt: new Date() }).where(and(eq(s.studioCarousels.id, id), eq(s.studioCarousels.creatorId, ctx.creatorId))));
     revalidateStudio();
     return ok("Carousel removed", { redirect: "/studio/carousels?tab=library&src=mine" });

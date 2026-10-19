@@ -2,7 +2,7 @@
 // Creator Studio — Profile and first-run onboarding (BRIEF §19.1). The creator_id always comes
 // from the session (studioActor), never from the form.
 import { z } from "zod";
-import { and, eq, isNull } from "drizzle-orm";
+import { and, eq, isNull, ilike, ne } from "drizzle-orm";
 import * as s from "@/lib/db/schema";
 import { withUser, type Tx } from "@/lib/db/tx";
 import { guard, ok, fail, type ActionResult } from "./result";
@@ -20,7 +20,16 @@ async function writeFollowers(tx: Tx, creatorId: string, userId: string, handle:
     .select({ id: s.creatorPlatforms.id })
     .from(s.creatorPlatforms)
     .where(and(eq(s.creatorPlatforms.creatorId, creatorId), eq(s.creatorPlatforms.platform, "instagram"), isNull(s.creatorPlatforms.archivedAt)));
-  const clean = handle.replace(/^@/, "");
+  const clean = handle.replace(/^@/, "").trim();
+  if (clean) {
+    // A handle belongs to one creator: inbound mail is routed by it (§6).
+    const [taken] = await tx
+      .select({ id: s.creatorPlatforms.id })
+      .from(s.creatorPlatforms)
+      .where(and(eq(s.creatorPlatforms.platform, "instagram"), ilike(s.creatorPlatforms.handle, clean), ne(s.creatorPlatforms.creatorId, creatorId), isNull(s.creatorPlatforms.archivedAt)))
+      .limit(1);
+    if (taken) throw new Error("That handle is already linked to another creator. Ask Crew to check it.");
+  }
   if (p) {
     await tx
       .update(s.creatorPlatforms)

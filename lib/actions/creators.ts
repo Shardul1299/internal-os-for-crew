@@ -29,8 +29,7 @@ import {
   validateAnchorPlan,
   validateBlackout,
   filterContextFor,
-  canStartPartnershipNow,
-} from "@/lib/rules/creator-flow";
+  canStartPartnershipNow, canSetAgreementStatus } from "@/lib/rules/creator-flow";
 import { rosterCheckins, exitWindowCheckin } from "@/lib/rules/retention";
 import { prepareImport, parseCsv, validateMapping, IMPORT_FIELDS, type Mapping } from "@/lib/rules/creator-import";
 import { rupeesToPaise } from "@/lib/format";
@@ -886,7 +885,8 @@ export async function saveAgreement(_prev: ActionResult | null, fd: FormData): P
     if (input.partnershipStartedOn && input.partnershipEndsOn && input.partnershipEndsOn < input.partnershipStartedOn) return fail("Partnership ends before it starts");
     // Only the Owner moves an agreement into partnership (§4).
     const [current] = await db.select().from(s.creatorAgreements).where(eq(s.creatorAgreements.creatorId, input.id));
-    if ((current?.status ?? "pilot") === "pilot" && input.status === "active") return fail("Use Start partnership: it needs the Filter re-score and the Owner");
+    const move = canSetAgreementStatus(current?.status ?? "pilot", input.status, me.role, creator.stage);
+    if (!move.ok) return fail(move.reasons[0]);
     const { id, ...vals } = input;
     const row = {
       pilotStartedOn: vals.pilotStartedOn ?? null,

@@ -7,7 +7,7 @@ import * as s from "@/lib/db/schema";
 import { db } from "@/lib/db";
 import { withUser } from "@/lib/db/tx";
 import { guard, ok, fail, type ActionResult } from "./result";
-import { studioActor, scriptFor, type StudioCtx } from "@/lib/queries/studio";
+import { studioActor, scriptFor, draftLockFor, type StudioCtx } from "@/lib/queries/studio";
 import { parseScriptSections } from "@/lib/studio/parse";
 import { splitScriptBlocks, classifyScriptBlocks } from "@/lib/studio/bulk-import";
 import { getConfig } from "@/lib/settings";
@@ -84,6 +84,8 @@ export async function saveScript(_prev: ActionResult | null, fd: FormData): Prom
       const sc = await scriptFor(ctx, parse(uuid, raw.id));
       if (!sc) return fail("Script not found");
       if (sc.readOnly) return fail("Starter scripts are read-only; clone it first");
+      const lock = await draftLockFor(ctx, "script", sc.id);
+      if (!lock.ok) return fail(lock.reasons[0]);
       await withUser(ctx.me.id, (tx) => tx.update(s.studioScripts).set(values).where(and(eq(s.studioScripts.id, sc.id), eq(s.studioScripts.creatorId, ctx.creatorId))));
       revalidateStudio();
       return ok("Script saved", { undo: { entity: "studio_scripts", id: sc.id } });
@@ -128,6 +130,8 @@ export async function applyImprovement(_prev: ActionResult | null, fd: FormData)
     const scriptId = parse(optUuid, raw.scriptId ?? "");
     const sc = scriptId ? await scriptFor(ctx, scriptId) : null;
     if (raw.mode === "replace" && sc && !sc.readOnly) {
+      const lock = await draftLockFor(ctx, "script", sc.id);
+      if (!lock.ok) return fail(lock.reasons[0]);
       await withUser(ctx.me.id, (tx) => tx.update(s.studioScripts).set({ bodyBlack: b.black, bodyRed: b.red, bodyGreen: b.green }).where(and(eq(s.studioScripts.id, sc.id), eq(s.studioScripts.creatorId, ctx.creatorId))));
       revalidateStudio();
       return ok("Script updated", { undo: { entity: "studio_scripts", id: sc.id } });
@@ -176,6 +180,8 @@ export async function removeScript(_prev: ActionResult | null, fd: FormData): Pr
   return guard(async () => {
     const ctx = await studioActor();
     const id = parse(uuid, fd.get("id"));
+    const lock = await draftLockFor(ctx, "script", id);
+    if (!lock.ok) return fail(lock.reasons[0]);
     const done = await withUser(ctx.me.id, (tx) =>
       tx.update(s.studioScripts).set({ archivedAt: new Date() }).where(and(eq(s.studioScripts.id, id), eq(s.studioScripts.creatorId, ctx.creatorId))).returning({ id: s.studioScripts.id }),
     );

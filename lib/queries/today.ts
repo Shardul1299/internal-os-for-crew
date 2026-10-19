@@ -9,6 +9,7 @@ import { withBlockers } from "./deliverables";
 import { addDays, today as todayISO, daysBetween, toISO } from "@/lib/dates";
 import { isPastSla } from "@/lib/rules/inbox";
 import { isOverdue } from "@/lib/rules/money";
+import { can } from "@/lib/rules/visibility";
 
 export type TodayRow = { id: string; title: string; lead: string; meta?: string; href: string; alert?: boolean };
 export type TodaySection = { key: string; title: string; rows: TodayRow[] };
@@ -83,7 +84,7 @@ export async function getToday(role: string): Promise<TodaySection[]> {
     rows: checkins.map(({ k, c }) => ({ id: k.id, title: `${c} · ${k.type.replace("_", " ")}`, lead: k.dueOn < today ? "Overdue" : k.dueOn, meta: undefined, href: `/creators/${k.creatorId}?tab=checkins`, alert: k.dueOn < today })),
   });
 
-  if (role !== "intern") {
+  if (can(role, "money")) {
     sections.push({
       key: "payouts",
       title: "Payouts due",
