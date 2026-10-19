@@ -3,6 +3,7 @@ import { brandContext } from "./prompts";
 import { FUNNEL_GUIDANCE } from "./reference";
 import {
   CAROUSEL_ARCHETYPES,
+  CAROUSEL_BACKGROUND_CATEGORIES,
   CAROUSEL_CRAFT_RULES,
   CAROUSEL_CTA_GUIDANCE,
   type CarouselCtaType,
@@ -26,6 +27,9 @@ export function buildCarouselPrompt(
     slideCount?: number;
     funnelStage?: "tofu" | "mofu" | "bofu";
     ctaType?: CarouselCtaType;
+    backgroundStyle?: string;
+    backgroundCategory?: string;
+    designNotes?: string;
   }
 ) {
   const archetype = CAROUSEL_ARCHETYPES.find((a) => a.id === opts.archetypeId) ?? CAROUSEL_ARCHETYPES[0];
@@ -34,6 +38,15 @@ export function buildCarouselPrompt(
   const ctaType = opts.ctaType ?? "save";
   const ctaInstruction = `CTA type: ${ctaType} -- ${CAROUSEL_CTA_GUIDANCE[ctaType]}`;
   const slideCount = opts.slideCount ?? 8;
+  const category = CAROUSEL_BACKGROUND_CATEGORIES.find((c) => c.id === opts.backgroundCategory);
+  const design = [
+    opts.backgroundStyle ? `Background style: ${opts.backgroundStyle}` : "",
+    category ? `Background photo category: ${category.name} -- ${category.description}` : "",
+    `Brand colours: ${Object.values(brand.colors).join(", ")} · Fonts: ${brand.fonts.heading} (headline) / ${brand.fonts.body} (body)`,
+    opts.designNotes?.trim() ? `Art direction: ${opts.designNotes.trim()}` : "",
+  ]
+    .filter(Boolean)
+    .join("\n");
 
   return `${brandContext(brand)}
 
@@ -42,6 +55,9 @@ Archetype: ${archetype.name} -- ${archetype.description}
 Topic: ${opts.topic}
 ${funnelInstruction}
 ${ctaInstruction}
+
+DESIGN (for whoever builds the slides -- don't describe it inside the slide text):
+${design}
 
 ${carouselCraftRulesBlock()}
 

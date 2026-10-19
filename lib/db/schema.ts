@@ -715,6 +715,7 @@ export const deliverableMetrics = pgTable("deliverable_metrics", {
   trackedSignups: integer("tracked_signups"),
   impressions: integer("impressions"), // stored, de-emphasised
   notes: text("notes"),
+  studioPostId: uuid("studio_post_id"), // (v3) the Studio Results post that logged these metrics — one record per sponsored post
   ...audit,
 });
 

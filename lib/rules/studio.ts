@@ -76,6 +76,11 @@ export function disclosureLine(standard: "asci" | "ftc" | "both") {
   return standard === "asci" ? "Disclosure: label as Paid partnership / #ad per ASCI guidelines, visible in the first frame." : standard === "ftc" ? "Disclosure: Paid partnership tag + #ad per FTC guidance, clear and early." : "Disclosure: Paid partnership tag + #ad (ASCI and FTC), visible in the first frame.";
 }
 
+/** Does GREEN carry a disclosure instruction for the deal's standard? */
+export function hasDisclosure(standard: "asci" | "ftc" | "both", green: string): boolean {
+  return DISCLOSURE[standard].test(green);
+}
+
 /** Submit a sponsored draft (§19.6.7): topic filters and the disclosure line are hard checks. */
 export function canSubmitSponsoredDraft(args: {
   text: string;
@@ -89,7 +94,7 @@ export function canSubmitSponsoredDraft(args: {
   if (!args.text.trim()) r.push("Draft is empty");
   const hits = textTopicConflicts(args.text, args.topicFilters);
   if (hits.length) r.push(`Topic filter: ${hits[0]}`);
-  if (!DISCLOSURE[args.disclosureStandard].test(args.green)) r.push("Disclosure line missing in GREEN");
+  if (!hasDisclosure(args.disclosureStandard, args.green)) r.push("Disclosure line missing in GREEN");
   return gate(r);
 }
 
