@@ -78,6 +78,8 @@ body {
   font-feature-settings: "tnum" 1, "cv11" 1;
 }
 
+/* Type classes live in the components layer so Tailwind utilities (e.g. text-pink-fg) can override them. */
+@layer components {
 /* Headlines: heavy condensed, uppercase, tight tracking — screen titles, big numbers, section marks. */
 .t-display {
   font-family: var(--font-display);
@@ -124,6 +126,8 @@ body {
 }
 .num {
   font-variant-numeric: tabular-nums;
+}
+
 }
 
 :focus-visible {
