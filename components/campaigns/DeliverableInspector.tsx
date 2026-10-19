@@ -1,7 +1,7 @@
 // Deliverable Inspector (Crew side): status gated by canTransitionDeliverable with reasons shown,
 // scheduled date, disclosure, claims, revision round, draft, live URL, metrics.
 import { InspectorTitle, Kvs, Kv, Caption, Alert, Markdown } from "@/components/ui";
-import { date } from "@/lib/format";
+import { date, int } from "@/lib/format";
 import { getConfig } from "@/lib/settings";
 import { statusMoves, DELIVERABLE_STATUS_LABEL, PLATFORM_LABEL, type TrackerRow } from "@/lib/queries/campaigns";
 import type * as s from "@/lib/db/schema";
@@ -66,7 +66,7 @@ export async function DeliverableInspector({
         ) : null}
         {canWrite ? (
           <div className="mt-2 space-y-2">
-            {!live && d.status !== "scheduled" ? <ClaimsForm id={d.id} approved={d.claimsApprovedByBrand} contactId={d.approvedByContactId} contacts={contacts.map((c) => ({ id: c.id, name: c.name }))} /> : null}
+            {d.status === "in_review" || (d.status === "approved" && d.claimsApprovedByBrand) || (d.claimsApprovedByBrand && ["briefed", "drafting"].includes(d.status)) ? <ClaimsForm id={d.id} approved={d.claimsApprovedByBrand} contactId={d.approvedByContactId} contacts={contacts.map((c) => ({ id: c.id, name: c.name }))} /> : null}
             {d.status === "in_review" || d.status === "approved" ? <RequestChangesForm id={d.id} round={d.revisionRound} /> : null}
           </div>
         ) : null}
@@ -78,11 +78,11 @@ export async function DeliverableInspector({
             <MetricsForm id={d.id} m={metrics} />
           ) : metrics ? (
             <Kvs>
-              <Kv k="Decision-makers" v={metrics.commentsDecisionMaker} />
-              <Kv k="Saves · shares" v={`${metrics.saves ?? "—"} · ${metrics.shares ?? "—"}`} />
-              <Kv k="Inbound" v={metrics.inboundToBrand} />
-              <Kv k="Sign-ups" v={metrics.trackedSignups} />
-              <Kv k="Impressions" v={<span className="text-fg-3">{metrics.impressions ?? "—"}</span>} />
+              <Kv k="Decision-makers" v={int(metrics.commentsDecisionMaker)} />
+              <Kv k="Saves · shares" v={`${int(metrics.saves)} · ${int(metrics.shares)}`} />
+              <Kv k="Inbound" v={int(metrics.inboundToBrand)} />
+              <Kv k="Sign-ups" v={int(metrics.trackedSignups)} />
+              <Kv k="Impressions" v={<span className="text-fg-3">{int(metrics.impressions)}</span>} />
             </Kvs>
           ) : (
             <Caption>No metrics yet.</Caption>

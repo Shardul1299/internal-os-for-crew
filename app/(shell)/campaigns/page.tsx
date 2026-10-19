@@ -3,7 +3,7 @@ import { getConfig } from "@/lib/settings";
 import { listCampaigns } from "@/lib/queries/campaigns";
 import { ScreenHeader, Section, Table, THead, TH, TR, TD, EmptyState, Meta, Alert } from "@/components/ui";
 import { KeyRows, SegmentedControl } from "@/components/ui/client";
-import { date, humanize } from "@/lib/format";
+import { date, humanize, label, DEAL_STAGE_LABEL } from "@/lib/format";
 
 export const metadata = { title: "Campaigns" };
 export const dynamic = "force-dynamic";
@@ -36,6 +36,7 @@ export default async function CampaignsPage({ searchParams }: { searchParams: Pr
             <THead>
               <TH>Campaign</TH>
               <TH>Brand</TH>
+              <TH className="hidden md:table-cell">Deal</TH>
               <TH>Status</TH>
               <TH className="hidden md:table-cell">Dates</TH>
               <TH align="right">Live</TH>
@@ -46,6 +47,10 @@ export default async function CampaignsPage({ searchParams }: { searchParams: Pr
                 <TR key={r.id} href={`/campaigns/${r.id}`}>
                   <TD className="font-semibold max-w-[280px] truncate">{r.name}</TD>
                   <TD>{r.brandName}</TD>
+                  <TD className="hidden md:table-cell max-w-[220px] truncate">
+                    <span className="text-fg-2">{label(DEAL_STAGE_LABEL, r.dealStage)}</span>
+                    {r.dealTitle !== r.name ? <span className="t-caption ml-2">{r.dealTitle}</span> : null}
+                  </TD>
                   <TD>{humanize(r.status)}</TD>
                   <TD className="hidden md:table-cell whitespace-nowrap">
                     <Meta>

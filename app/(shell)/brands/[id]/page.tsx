@@ -76,7 +76,7 @@ export default async function BrandPage({ params, searchParams }: { params: Prom
       main={
         <>
           <ScreenHeader title={brand.name} action={canWrite ? <AddContactSheet brandId={id} /> : undefined}>
-            <div className="flex flex-wrap gap-x-2 gap-y-1">
+            <div className="flex flex-wrap gap-x-1 gap-y-1">
               <span>{[CATEGORY_LABEL[brand.category], OWNER_TEAM_LABEL[brand.ownerTeam], brand.isHouseClient ? "House client" : null].filter(Boolean).join(" · ")}</span>
               {brand.website ? (
                 <a href={brand.website} target="_blank" rel="noreferrer" className="text-fg-2 hover:underline underline-offset-2">

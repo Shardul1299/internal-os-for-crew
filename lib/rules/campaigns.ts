@@ -2,7 +2,7 @@
 import { type RulesConfig, gate, type GateResult } from "./config";
 import { dealEligibility, type CreatorFacts } from "./creators";
 import { topicConflicts } from "./deals";
-import { daysBetween, type ISODate } from "../dates";
+import { addDays, daysBetween, type ISODate } from "../dates";
 
 /** Frontseat amplification is a five-post package (§3.4, §8.4). BRIEF: clarify — package size as a setting. */
 export const FRONTSEAT_POSTS = 5;
@@ -111,4 +111,18 @@ export function canInviteContact(c: { email: string | null; portalUserId: string
   if (!c.email?.trim()) r.push("Contact needs an email");
   if (c.portalUserId) r.push("Already invited");
   return gate(r);
+}
+
+/**
+ * Due date suggestion (§8.1): the next day from `from` with nothing on the creator's calendar and
+ * outside their blackout weeks. Falls back to `from` when nothing is free within `horizonDays`.
+ */
+export function nextFreeSlot(from: ISODate, taken: ISODate[], blackouts: { startsOn: ISODate; endsOn: ISODate }[], horizonDays = 60): ISODate {
+  const busy = new Set(taken);
+  let d = from;
+  for (let i = 0; i < horizonDays; i++) {
+    if (!busy.has(d) && !blackouts.some((b) => d >= b.startsOn && d <= b.endsOn)) return d;
+    d = addDays(d, 1);
+  }
+  return from;
 }

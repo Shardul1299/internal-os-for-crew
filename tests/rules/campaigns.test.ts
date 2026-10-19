@@ -9,6 +9,7 @@ import {
   quarterOf,
   riskReviewCurrent,
   canInviteContact,
+  nextFreeSlot,
 } from "@/lib/rules/campaigns";
 import { forwardingAddress, forwardedHandle, routeInbound, prescreenFlags, conversionDefaults, canConvert, canForward } from "@/lib/rules/inbox";
 import { requestChanges, canTransitionDeliverable } from "@/lib/rules/deliverables";
@@ -104,5 +105,12 @@ describe("brand portal visibility", () => {
     expect(() => assertNoInternal({ campaigns: [{ name: "x", deliverables: [{ status: "live" }] }] })).not.toThrow();
     expect(() => assertNoInternal({ lines: [{ rung: "pitch" }] })).toThrow();
     expect(() => assertNoInternal({ creator: { tier: "T2" } })).toThrow();
+  });
+});
+
+describe("§8.1 due date suggestion", () => {
+  it("skips busy days and blackout weeks", () => {
+    expect(nextFreeSlot("2026-11-02", ["2026-11-02", "2026-11-03"], [])).toBe("2026-11-04");
+    expect(nextFreeSlot("2026-11-02", [], [{ startsOn: "2026-11-01", endsOn: "2026-11-07" }])).toBe("2026-11-08");
   });
 });

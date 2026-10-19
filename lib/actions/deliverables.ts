@@ -134,11 +134,17 @@ export async function setClaims(_prev: ActionResult | null, fd: FormData): Promi
       const [c] = await db.select({ id: s.brandContacts.id }).from(s.brandContacts).where(and(eq(s.brandContacts.id, input.contactId), eq(s.brandContacts.brandId, brandId)));
       if (!c) return fail("That contact isn't on this brand");
     }
+    if (input.approved && d.status !== "in_review") return fail("Claims are approved on a draft in review");
     if (!input.approved && ["scheduled", "live", "reported"].includes(d.status)) return fail("Claims can't be withdrawn once scheduled");
     await withUser(me.id, (tx) =>
       tx
         .update(s.deliverables)
-        .set({ claimsApprovedByBrand: input.approved, approvedByContactId: input.approved ? input.contactId : null })
+        .set({
+          claimsApprovedByBrand: input.approved,
+          approvedByContactId: input.approved ? input.contactId : null,
+          // An approved draft without claims approval goes back to review (approved needs the brand's claims sign-off).
+          ...(!input.approved && d.status === "approved" ? { status: "in_review" as const } : {}),
+        })
         .where(eq(s.deliverables.id, d.id)),
     );
     done(d.campaignId);

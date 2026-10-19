@@ -1,14 +1,15 @@
 "use server";
 // Campaign actions (BRIEF §8): add creators, campaign status, Frontseat items, report, feedback request.
 import { z } from "zod";
-import { and, eq, isNull } from "drizzle-orm";
+import { and, eq, gte, isNull } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
 import { db } from "@/lib/db";
 import * as s from "@/lib/db/schema";
 import { withUser } from "@/lib/db/tx";
 import { actor } from "@/lib/session";
 import { getConfig } from "@/lib/settings";
-import { canAddToCampaign, FRONTSEAT_KEY, FRONTSEAT_POSTS } from "@/lib/rules/campaigns";
+import { canAddToCampaign, nextFreeSlot, FRONTSEAT_KEY, FRONTSEAT_POSTS } from "@/lib/rules/campaigns";
+import { addDays, today } from "@/lib/dates";
 import { filterScoresFor } from "@/lib/queries/facts";
 import { deliverableLabel } from "@/lib/queries/campaigns";
 import { ok, fail, guard, type ActionResult } from "./result";
@@ -50,6 +51,17 @@ export async function addCreatorToCampaign(_prev: ActionResult | null, fd: FormD
     const g = canAddToCampaign(cfg, { stage: creator.stage, filterScores: scores.get(creator.id) ?? [], representedElsewhere: creator.representedElsewhere }, deal.briefTags, topics.map((t) => ({ kind: t.kind, value: t.value })));
     if (!g.ok) return fail(g.reasons[0]);
     const def = cfg.deliverables.find((d) => d.key === input.deliverableKey)!;
+    let dueOn = input.dueOn;
+    if (!dueOn) {
+      // Suggest the creator's next free calendar day (blackouts skipped; they only warn later).
+      const t = today();
+      const from = c.startsOn && c.startsOn > addDays(t, 7) ? c.startsOn : addDays(t, 7);
+      const [items, blackouts] = await Promise.all([
+        db.select({ date: s.creatorCalendarItems.date }).from(s.creatorCalendarItems).where(and(eq(s.creatorCalendarItems.creatorId, creator.id), gte(s.creatorCalendarItems.date, from), isNull(s.creatorCalendarItems.archivedAt))),
+        db.select().from(s.creatorBlackouts).where(and(eq(s.creatorBlackouts.creatorId, creator.id), isNull(s.creatorBlackouts.archivedAt))),
+      ]);
+      dueOn = nextFreeSlot(from, items.map((i) => i.date), blackouts);
+    }
     const role = deal.origin === "creator_inbound" && deal.originatingCreatorId && deal.originatingCreatorId !== creator.id ? "upsell" : "primary";
     const id = await withUser(me.id, async (tx) => {
       const [dc] = await tx.select().from(s.dealCreators).where(and(eq(s.dealCreators.dealId, deal.id), eq(s.dealCreators.creatorId, creator.id)));
@@ -64,7 +76,7 @@ export async function addCreatorToCampaign(_prev: ActionResult | null, fd: FormD
           platform: def.platform as (typeof s.platformEnum.enumValues)[number],
           title: `${c.name.split(" — ")[0]} · ${deliverableLabel(cfg, def.key)}`,
           briefTags: deal.briefTags,
-          dueOn: input.dueOn,
+          dueOn,
           status: "briefed",
           createdBy: me.id,
         })
