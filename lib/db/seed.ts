@@ -3,7 +3,7 @@
 import "./env";
 import { drizzle } from "drizzle-orm/postgres-js";
 import postgres from "postgres";
-import { isNull, sql as dsql } from "drizzle-orm";
+import { eq, isNull, sql as dsql } from "drizzle-orm";
 import * as s from "./schema";
 import { DEFAULT_CONFIG, NUMERIC_SETTINGS, DEFAULT_DELIVERABLES, DEFAULT_ADDONS, DEFAULT_NO_LIST, DEFAULT_BLOCKLIST } from "../rules/config";
 import { TEMPLATES } from "./templates";
@@ -106,6 +106,19 @@ async function main() {
     { email: "finance@owled.example", name: "OWLED finance", role: "finance_viewer" },
   ];
   for (const p of people) await db.insert(s.users).values(p).onConflictDoNothing();
+
+  // Real sign-in addresses for the first deploy: SEED_OWNER_EMAIL / SEED_CREW_LEAD_EMAIL replace the
+  // placeholders (only while the placeholder is still in place, so re-running never overwrites edits).
+  const real: [string | undefined, string][] = [
+    [process.env.SEED_OWNER_EMAIL, "ayush@crew.example"],
+    [process.env.SEED_CREW_LEAD_EMAIL, "shardul@crew.example"],
+  ];
+  for (const [email, placeholder] of real) {
+    if (!email?.trim()) continue;
+    const clean = email.trim().toLowerCase();
+    const [exists] = await db.select({ id: s.users.id }).from(s.users).where(eq(s.users.email, clean));
+    if (!exists) await db.update(s.users).set({ email: clean }).where(eq(s.users.email, placeholder));
+  }
 
   // Studio Starter library — global read-only rows (creator_id = null), loaded once.
   const [{ n: scriptCount }] = await db.select({ n: dsql<number>`count(*)::int` }).from(s.studioScripts).where(isNull(s.studioScripts.creatorId));

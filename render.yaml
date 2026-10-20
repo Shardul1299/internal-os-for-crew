@@ -1,0 +1,38 @@
+# Render Blueprint: a Node web service + managed Postgres 16, deployed from this repo.
+# Dashboard → New → Blueprint → pick this repo/branch. Render asks for the `sync: false` values.
+databases:
+  - name: snoball-db
+    databaseName: snoball
+    plan: basic-256mb
+    region: singapore
+    postgresMajorVersion: "16"
+
+services:
+  - type: web
+    name: snoball-os
+    runtime: node
+    region: singapore
+    plan: starter
+    buildCommand: corepack enable && pnpm install --frozen-lockfile && pnpm build
+    preDeployCommand: pnpm db:migrate && pnpm db:seed
+    startCommand: pnpm start -p $PORT
+    healthCheckPath: /signin
+    envVars:
+      - key: NODE_VERSION
+        value: "22"
+      - key: DATABASE_URL
+        fromDatabase:
+          name: snoball-db
+          property: connectionString
+      - key: AUTH_SECRET
+        generateValue: true
+      - key: INBOUND_EMAIL_SECRET
+        generateValue: true
+      - key: SEED_OWNER_EMAIL
+        sync: false
+      - key: SEED_CREW_LEAD_EMAIL
+        sync: false
+      - key: EMAIL_SERVER
+        sync: false
+      - key: EMAIL_FROM
+        value: "Snoball OS <os@crew.example>"
